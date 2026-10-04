@@ -532,7 +532,16 @@ jobs:
         clear_stats: true
 
     - name: Initialize Config Fragment
-      run: touch "${{ github.workspace }}/wild_gki.fragment"
+      run: |
+        touch "${{ github.workspace }}/wild_gki.fragment"
+        cat << 'EOF' >> "${{ github.workspace }}/wild_gki.fragment"
+        CONFIG_CFG80211_WEXT=y
+        CONFIG_MAC80211_USB=y
+        CONFIG_ATH9K_HTC=y
+        CONFIG_RTL8187=y
+        CONFIG_RT2800USB=y
+        CONFIG_RT73USB=y
+        EOF
 
     - name: Apply Kernel Bypass Hack
       if: ${{ inputs.allow_version_mismatch == 'true' }}
@@ -556,9 +565,25 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE
         git clone https://github.com/504ensicsLabs/LiME.git
-        KERNEL_SRC=$(find $GITHUB_WORKSPACE -type d -name "common" | head -n 1)
+        
+        # Ruta base estricta del kernel
+        KERNEL_SRC="${GITHUB_WORKSPACE}/kernel/common"
+        
+        # Buscar el .config generado evadiendo herramientas pre-compiladas
+        CONFIG_FILE=$(find /home/runner -name ".config" -type f 2>/dev/null | grep -v "prebuilts" | head -n 1)
+        
         cd LiME/src
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C $KERNEL_SRC M=$(pwd) modules
+        
+        # Compilar enlazando ambas rutas
+        if [ -n "$CONFIG_FILE" ]; then
+          OUT_DIR=$(dirname "$CONFIG_FILE")
+          echo "Compilando LiME usando salida: $OUT_DIR"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C "$KERNEL_SRC" O="$OUT_DIR" M="$(pwd)" modules
+        else
+          echo "Compilando LiME en el árbol fuente..."
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C "$KERNEL_SRC" M="$(pwd)" modules
+        fi
+        
         cp lime.ko $GITHUB_WORKSPACE/
 
     - name: Subir lime.ko como Artifact independiente
