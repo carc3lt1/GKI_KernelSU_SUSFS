@@ -552,6 +552,21 @@ jobs:
         version: ${{ inputs.version }}
         page_size: ${{ inputs.page_size }}
 
+    - name: Descargar y compilar LiME
+      run: |
+        cd $GITHUB_WORKSPACE
+        git clone https://github.com/504ensicsLabs/LiME.git
+        KERNEL_SRC=$(find $GITHUB_WORKSPACE -type d -name "common" | head -n 1)
+        cd LiME/src
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C $KERNEL_SRC M=$(pwd) modules
+        cp lime.ko $GITHUB_WORKSPACE/
+
+    - name: Subir lime.ko como Artifact independiente
+      uses: actions/upload-artifact@v7
+      with:
+        name: LiME-Module
+        path: ${{ github.workspace }}/lime.ko
+
     - name: Get Cache Stats
       uses: ./.github/actions/cache-stats
       with:
