@@ -550,6 +550,25 @@ jobs:
         version: ${{ inputs.version }}
         allow_version_mismatch: true
 
+    - name: Inyectar LiME en el código fuente (In-Tree)
+      run: |
+        cd $GITHUB_WORKSPACE
+        git clone https://github.com/504ensicsLabs/LiME.git
+        KERNEL_SRC="${GITHUB_WORKSPACE}/kernel/common"
+        
+        # Crear directorio nativo para LiME dentro del núcleo
+        mkdir -p $KERNEL_SRC/drivers/misc/lime
+        cp LiME/src/*.c LiME/src/*.h $KERNEL_SRC/drivers/misc/lime/
+        
+        # Generar las reglas de compilación modulares
+        cat << 'EOF' > $KERNEL_SRC/drivers/misc/lime/Makefile
+        obj-m += lime.o
+        lime-y := main.o tcp.o disk.o
+        EOF
+        
+        # Enganchar el módulo al sistema de Kbuild principal
+        echo 'obj-m += lime/' >> $KERNEL_SRC/drivers/misc/Makefile
+
     - name: Build Normal Kernel
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
@@ -561,31 +580,17 @@ jobs:
         version: ${{ inputs.version }}
         page_size: ${{ inputs.page_size }}
 
-    - name: Descargar y compilar LiME
+    - name: Recuperar lime.ko generado
       run: |
-        cd $GITHUB_WORKSPACE
-        git clone https://github.com/504ensicsLabs/LiME.git
-        
-        # Ruta base estricta del kernel
-        KERNEL_SRC="${GITHUB_WORKSPACE}/kernel/common"
-        
-        # Buscar el .config generado evadiendo herramientas pre-compiladas
-        CONFIG_FILE=$(find /home/runner -name ".config" -type f 2>/dev/null | grep -v "prebuilts" | head -n 1)
-        
-        cd LiME/src
-        
-        # Compilar enlazando ambas rutas
-        if [ -n "$CONFIG_FILE" ]; then
-          OUT_DIR=$(dirname "$CONFIG_FILE")
-          echo "Compilando LiME usando salida: $OUT_DIR"
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C "$KERNEL_SRC" O="$OUT_DIR" M="$(pwd)" modules
+        # Buscar el módulo compilado dentro del entorno seguro de Bazel
+        LIME_KO=$(find /home/runner $GITHUB_WORKSPACE -name "lime.ko" -type f | head -n 1)
+        if [ -n "$LIME_KO" ]; then
+          echo "¡Módulo LiME compilado con éxito en: $LIME_KO!"
+          cp "$LIME_KO" $GITHUB_WORKSPACE/lime.ko
         else
-          echo "Compilando LiME en el árbol fuente..."
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -C "$KERNEL_SRC" M="$(pwd)" modules
+          echo "Error crítico: lime.ko no se encontró."
+          exit 1
         fi
-        
-        cp lime.ko $GITHUB_WORKSPACE/
-
     - name: Subir lime.ko como Artifact independiente
       uses: actions/upload-artifact@v7
       with:
