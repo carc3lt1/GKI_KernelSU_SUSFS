@@ -572,6 +572,12 @@ jobs:
         
         # 4. Enganchar al Kbuild principal
         echo 'obj-m += lime/' >> $KERNEL_SRC/drivers/misc/Makefile
+        
+        # 5. Registrar el módulo exportado en el manifiesto de Bazel (Kleaf)
+        cd $KERNEL_SRC
+        wget -qO buildozer https://github.com/bazelbuild/buildtools/releases/latest/download/buildozer-linux-amd64
+        chmod +x buildozer
+        ./buildozer 'add module_outs drivers/misc/lime/lime.ko' //common:kernel_aarch64
 
     - name: Build Normal Kernel
       env:
