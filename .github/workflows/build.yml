@@ -556,24 +556,21 @@ jobs:
         git clone https://github.com/504ensicsLabs/LiME.git
         KERNEL_SRC="${GITHUB_WORKSPACE}/kernel/common"
         
-        # 1. Crear directorio nativo
+        # 1. Crear directorio y transferir todo el código fuente
         mkdir -p $KERNEL_SRC/drivers/misc/lime
         cp LiME/src/*.c LiME/src/*.h $KERNEL_SRC/drivers/misc/lime/
         
-        # 2. Hotpatch: Importar el namespace restringido de VFS en main.c
-        sed -i '/MODULE_LICENSE("GPL");/a MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);' $KERNEL_SRC/drivers/misc/lime/main.c
+        cd $KERNEL_SRC/drivers/misc/lime
         
-        # 3. Hotpatch: Deshabilitar el modo de red/hash para evadir dependencias criptográficas pesadas (ldigest/deflate)
-        # Esto forzará a LiME a compilar solo su motor de volcado a memoria SD/Disk
-        sed -i 's/tcp.o//g' LiME/src/Makefile
+        # 2. Hotpatch seguro: Inyectar namespace VFS al final del archivo para evadir sed skips
+        echo 'MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);' >> main.c
         
-        # 4. Generar reglas de compilación modulares robustas
-        cat << 'EOF' > $KERNEL_SRC/drivers/misc/lime/Makefile
-        obj-m += lime.o
-        lime-y := main.o disk.o
-        EOF
+        # 3. Makefile Dinámico: Detectar automáticamente todos los archivos .c y enlazarlos
+        LIME_OBJS=$(ls *.c | sed 's/\.c/.o/g' | tr '\n' ' ')
+        echo "obj-m += lime.o" > Makefile
+        echo "lime-y := $LIME_OBJS" >> Makefile
         
-        # 5. Enganchar al Kbuild
+        # 4. Enganchar al Kbuild principal
         echo 'obj-m += lime/' >> $KERNEL_SRC/drivers/misc/Makefile
 
     - name: Build Normal Kernel
