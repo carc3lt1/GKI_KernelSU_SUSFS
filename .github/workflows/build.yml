@@ -562,10 +562,10 @@ jobs:
         
         cd $KERNEL_SRC/drivers/misc/lime
         
-        # 2. Hotpatch seguro: Inyectar namespace VFS al final del archivo para evadir sed skips
+        # 2. Hotpatch seguro: Inyectar namespace VFS al final del archivo
         echo 'MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);' >> main.c
         
-        # 3. Makefile Dinámico: Detectar automáticamente todos los archivos .c y enlazarlos
+        # 3. Makefile Dinámico
         LIME_OBJS=$(ls *.c | sed 's/\.c/.o/g' | tr '\n' ' ')
         echo "obj-m += lime.o" > Makefile
         echo "lime-y := $LIME_OBJS" >> Makefile
@@ -573,11 +573,14 @@ jobs:
         # 4. Enganchar al Kbuild principal
         echo 'obj-m += lime/' >> $KERNEL_SRC/drivers/misc/Makefile
         
-        # 5. Registrar el módulo exportado en el manifiesto de Bazel (Kleaf)
+        # 5. Autorizar el módulo en las listas nativas de GKI (Bypass estricto de Bazel)
         cd $KERNEL_SRC
-        wget -qO buildozer https://github.com/bazelbuild/buildtools/releases/latest/download/buildozer-linux-amd64
-        chmod +x buildozer
-        ./buildozer 'add module_outs drivers/misc/lime/lime.ko' //common:kernel_aarch64
+        
+        # Para archivos de lista en texto plano
+        find . -type f \( -name "modules.list" -o -name "*gki_aarch64_modules*" \) ! -name "*.bzl" -exec sh -c 'grep -q "lime.ko" "$1" || echo "drivers/misc/lime/lime.ko" >> "$1"' _ {} \;
+        
+        # Para listas de Python/Bazel (si el núcleo las utiliza)
+        find . -type f -name "*gki_aarch64_modules*.bzl" -exec sh -c 'grep -q "lime.ko" "$1" || sed -i "/\]/i \    \"drivers/misc/lime/lime.ko\"," "$1"' _ {} \;
 
     - name: Build Normal Kernel
       env:
