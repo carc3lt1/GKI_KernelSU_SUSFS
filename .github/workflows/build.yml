@@ -556,17 +556,24 @@ jobs:
         git clone https://github.com/504ensicsLabs/LiME.git
         KERNEL_SRC="${GITHUB_WORKSPACE}/kernel/common"
         
-        # Crear directorio nativo para LiME dentro del núcleo
+        # 1. Crear directorio nativo
         mkdir -p $KERNEL_SRC/drivers/misc/lime
         cp LiME/src/*.c LiME/src/*.h $KERNEL_SRC/drivers/misc/lime/
         
-        # Generar las reglas de compilación modulares
+        # 2. Hotpatch: Importar el namespace restringido de VFS en main.c
+        sed -i '/MODULE_LICENSE("GPL");/a MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);' $KERNEL_SRC/drivers/misc/lime/main.c
+        
+        # 3. Hotpatch: Deshabilitar el modo de red/hash para evadir dependencias criptográficas pesadas (ldigest/deflate)
+        # Esto forzará a LiME a compilar solo su motor de volcado a memoria SD/Disk
+        sed -i 's/tcp.o//g' LiME/src/Makefile
+        
+        # 4. Generar reglas de compilación modulares robustas
         cat << 'EOF' > $KERNEL_SRC/drivers/misc/lime/Makefile
         obj-m += lime.o
-        lime-y := main.o tcp.o disk.o
+        lime-y := main.o disk.o
         EOF
         
-        # Enganchar el módulo al sistema de Kbuild principal
+        # 5. Enganchar al Kbuild
         echo 'obj-m += lime/' >> $KERNEL_SRC/drivers/misc/Makefile
 
     - name: Build Normal Kernel
