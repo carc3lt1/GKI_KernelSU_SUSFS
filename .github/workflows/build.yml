@@ -535,12 +535,24 @@ jobs:
       run: |
         touch "${{ github.workspace }}/wild_gki.fragment"
         cat << 'EOF' >> "${{ github.workspace }}/wild_gki.fragment"
+        # Network configs
         CONFIG_CFG80211_WEXT=y
         CONFIG_MAC80211_USB=y
         CONFIG_ATH9K_HTC=y
         CONFIG_RTL8187=y
         CONFIG_RT2800USB=y
         CONFIG_RT73USB=y
+        
+        # SUSFS Stealth & Spoofing Flags
+        CONFIG_KSU_SUSFS=y
+        CONFIG_KSU_SUSFS_SUS_PATH=y
+        CONFIG_KSU_SUSFS_SUS_MOUNT=y
+        CONFIG_KSU_SUSFS_SUS_KSTAT=y
+        CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+        CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+        CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+        CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+        CONFIG_KSU_SUSFS_SUS_MAP=y
         EOF
 
     - name: Apply Kernel Bypass Hack
@@ -600,12 +612,22 @@ jobs:
         version: ${{ inputs.version }}
         page_size: ${{ inputs.page_size }}
 
-    - name: Recuperar lime.ko generado
+    - name: Recuperar y ofuscar lime.ko generado
       run: |
         # Buscar el módulo compilado dentro del entorno seguro de Bazel
         LIME_KO=$(find /home/runner $GITHUB_WORKSPACE -name "lime.ko" -type f | head -n 1)
         if [ -n "$LIME_KO" ]; then
           echo "¡Módulo LiME compilado con éxito en: $LIME_KO!"
+          
+          # Limpiar símbolos de depuración para evadir escaneos heurísticos
+          STRIP_BIN=$(find /home/runner/work -name "llvm-strip" -type f -executable | head -n 1)
+          if [ -n "$STRIP_BIN" ]; then
+            "$STRIP_BIN" --strip-unneeded "$LIME_KO"
+            echo "[+] Símbolos de depuración eliminados con llvm-strip."
+          else
+            strip --strip-unneeded "$LIME_KO" 2>/dev/null || echo "[-] No se pudo aplicar strip (herramienta no encontrada), omitiendo."
+          fi
+          
           cp "$LIME_KO" $GITHUB_WORKSPACE/lime.ko
         else
           echo "Error crítico: lime.ko no se encontró."
