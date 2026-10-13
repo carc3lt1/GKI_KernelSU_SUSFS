@@ -82,6 +82,13 @@ runs:
           exit 1
         fi
 
+        # [SIGILO] Eliminar la carpeta .git para evitar contaminación en el 'uname -r' del Kernel
+        # Evita que scripts/setlocalversion añada el sufijo "-dirty" o cambie el hash del build.
+        if [ -d "$KERNEL_DIR/NoMount/.git" ]; then
+          rm -rf "$KERNEL_DIR/NoMount/.git"
+          echo "[+] Rastro Git de NoMount eliminado para preservar pureza de versión."
+        fi
+
         echo "commit=$actual_commit" >> "$GITHUB_OUTPUT"
         echo "NOMOUNT_COMMIT=$actual_commit" >> "$GITHUB_ENV"
         echo "NoMount integrated (kernel $KERNEL_VERSION, commit $actual_commit)"
