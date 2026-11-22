@@ -486,9 +486,8 @@ jobs:
           CONFIG_USB_ETH=y
           CONFIG_USB_ETH_RNDIS=y
 
-          # NetHunter: Bluetooth, Serial/SDR & OTG Filesystems
-          CONFIG_BT_HCIUART=y
-          CONFIG_BT_HCIBTUSB=y
+          # NetHunter: Serial/SDR & OTG Filesystems
+          # (Bluetooth externo omitido: CONFIG_BT es =m en GKI 6.6)
           CONFIG_USB_ACM=y
           CONFIG_USB_SERIAL=y
           CONFIG_USB_SERIAL_CP210X=y
