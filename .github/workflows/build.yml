@@ -444,7 +444,6 @@ jobs:
           # Stealth & Anti-Detection (Kernel Level)
           # CONFIG_LOCALVERSION_AUTO is not set
           CONFIG_SECURITY_DMESG_RESTRICT=y
-          # CONFIG_KSU_SUSFS_ENABLE_LOG is not set
 
           # WiFi USB externo omitido: CFG80211/RFKILL son =m en system_dlkm (GKI 6.6)
 
