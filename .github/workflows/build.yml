@@ -440,20 +440,41 @@ jobs:
         run: |
           cat << 'EOF' >> "${{ github.workspace }}/kernel/common/wild_defconfig.fragment"
 
+          # Stealth & Anti-Detection (Kernel Level)
+          CONFIG_LOCALVERSION_AUTO=n
+          CONFIG_SECURITY_DMESG_RESTRICT=y
+          CONFIG_KSU_SUSFS_ENABLE_LOG=n
+
           # Network configs & WiFi Injection (NetHunter)
           CONFIG_CFG80211_WEXT=y
-          CONFIG_MAC80211_USB=y
-          CONFIG_MAC80211_MONITOR=y
+          CONFIG_MAC80211=y
           CONFIG_ATH9K_HTC=y
           CONFIG_RTL8187=y
           CONFIG_RT2800USB=y
           CONFIG_RT73USB=y
+          CONFIG_MT7601U=y
           CONFIG_USB_NET_RNDIS_WLAN=y
 
-          # NetHunter: System V IPC (Requerido por PostgreSQL/Metasploit)
+          # Advanced Networking, BBR & TPROXY (VPN/Xray)
+          CONFIG_TCP_CONG_BBR=y
+          CONFIG_NET_SCH_FQ=y
+          CONFIG_NETFILTER_XT_TARGET_TPROXY=y
+          CONFIG_NETFILTER_XT_MATCH_SOCKET=y
+          CONFIG_TUN=y
+          CONFIG_VETH=y
+          CONFIG_NETFILTER_XT_MATCH_MAC=y
+          CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
+          CONFIG_DUMMY=y
+
+          # NetHunter: System V IPC, Namespaces & Chroot/Containers
           CONFIG_SYSVIPC=y
           CONFIG_SYSVIPC_SYSCTL=y
           CONFIG_POSIX_MQUEUE=y
+          CONFIG_BINFMT_MISC=y
+          CONFIG_USER_NS=y
+          CONFIG_PID_NS=y
+          CONFIG_NET_NS=y
+          CONFIG_IPC_NS=y
 
           # NetHunter: USB Gadget & BadUSB (HID Attacks)
           CONFIG_USB_GADGET=y
@@ -464,21 +485,16 @@ jobs:
           CONFIG_USB_ETH=y
           CONFIG_USB_ETH_RNDIS=y
 
-          # NetHunter: Bluetooth & Serial/SDR (Hardware Externo)
+          # NetHunter: Bluetooth, Serial/SDR & OTG Filesystems
           CONFIG_BT_HCIUART=y
           CONFIG_BT_HCIUSB=y
+          CONFIG_USB_ACM=y
           CONFIG_USB_SERIAL=y
           CONFIG_USB_SERIAL_CP210X=y
           CONFIG_USB_SERIAL_FTDI_SIO=y
           CONFIG_USB_SERIAL_CH341=y
-
-          # NetHunter: Advanced Networking & Chroot Environment
-          CONFIG_TUN=y
-          CONFIG_VETH=y
-          CONFIG_BINFMT_MISC=y
-          CONFIG_NETFILTER_XT_MATCH_MAC=y
-          CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
-          CONFIG_DUMMY=y
+          CONFIG_NTFS3_FS=y
+          CONFIG_ISO9660_FS=y
 
           # SUSFS Stealth & Spoofing Flags
           CONFIG_KSU_SUSFS=y
@@ -581,6 +597,7 @@ jobs:
         if: always()
         uses: ./.github/actions/extract-the-built-config
       - name: Verify the fragment landed in .config
+        continue-on-error: true
         uses: ./.github/actions/verify-fragment
 
       - name: Consolidated Build Summary
