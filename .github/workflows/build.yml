@@ -446,23 +446,7 @@ jobs:
           CONFIG_SECURITY_DMESG_RESTRICT=y
           # CONFIG_KSU_SUSFS_ENABLE_LOG is not set
 
-          # Network configs & WiFi Injection (NetHunter)
-          CONFIG_WIRELESS=y
-          CONFIG_CFG80211=y
-          CONFIG_CFG80211_WEXT=y
-          CONFIG_MAC80211=y
-          CONFIG_WLAN=y
-          CONFIG_WLAN_VENDOR_ATH=y
-          CONFIG_ATH_CARDS=y
-          CONFIG_ATH9K_HTC=y
-          CONFIG_WLAN_VENDOR_REALTEK=y
-          CONFIG_RTL8187=y
-          CONFIG_WLAN_VENDOR_RALINK=y
-          CONFIG_RT2X00=y
-          CONFIG_RT2800USB=y
-          CONFIG_RT73USB=y
-          CONFIG_WLAN_VENDOR_MEDIATEK=y
-          CONFIG_MT7601U=y
+          # WiFi USB externo omitido: CFG80211/RFKILL son =m en system_dlkm (GKI 6.6)
 
           # Advanced Networking, BBR & TPROXY (VPN/Xray)
           CONFIG_TCP_CONG_BBR=y
