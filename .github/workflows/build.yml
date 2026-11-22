@@ -438,7 +438,8 @@ jobs:
       - name: Inject Custom NetHunter & SUSFS Config Fragment
         shell: bash
         run: |
-          cat << 'EOF' >> "${{ github.workspace }}/kernel/common/wild_defconfig.fragment"
+          FRAGMENT="${{ github.workspace }}/kernel/common/wild_defconfig.fragment"
+          cat << 'EOF' >> "$FRAGMENT"
 
           # Stealth & Anti-Detection (Kernel Level)
           # CONFIG_LOCALVERSION_AUTO is not set
@@ -495,18 +496,30 @@ jobs:
           CONFIG_USB_SERIAL_CH341=y
           CONFIG_NTFS3_FS=y
           CONFIG_ISO9660_FS=y
-
-          # SUSFS Stealth & Spoofing Flags
-          CONFIG_KSU_SUSFS=y
-          CONFIG_KSU_SUSFS_SUS_PATH=y
-          CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-          CONFIG_KSU_SUSFS_SUS_MAP=y
           EOF
+
+          python3 - "$FRAGMENT" << 'PYEOF'
+          import re, sys
+          path = sys.argv[1]
+          pat = re.compile(r'^(?:#\s*)?(CONFIG_[A-Za-z0-9_]+)(?:=| is not set)')
+          seen = {}
+          order = []
+          with open(path, 'r', encoding='utf-8') as f:
+              for raw in f:
+                  line = raw.rstrip('\n')
+                  m = pat.match(line.strip())
+                  if m:
+                      key = m.group(1)
+                      if key not in seen:
+                          order.append(('cfg', key))
+                      seen[key] = line.strip()
+                  else:
+                      order.append(('raw', line))
+          with open(path, 'w', encoding='utf-8') as f:
+              for kind, val in order:
+                  f.write((seen[val] if kind == 'cfg' else val) + '\n')
+          print(f"[+] Fragmento deduplicado: {len(seen)} símbolos únicos en {path}")
+          PYEOF
 
       - name: Apply Kernel Bypass Hack
         if: ${{ inputs.allow_version_mismatch == 'true' }}
